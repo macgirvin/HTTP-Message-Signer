@@ -58,7 +58,7 @@ class HttpMessageSigner
      * @throws UnProcessableSignatureException
      */
 
-    public function signRequest(string $coveredFields, MessageInterface $interface, RequestInterface $originalRequest = null): MessageInterface
+    public function signRequest(string $coveredFields, MessageInterface $interface, ?RequestInterface $originalRequest = null): MessageInterface
     {
         $headers = $this->getHeaders($interface);
         if ($originalRequest) {
@@ -86,7 +86,7 @@ class HttpMessageSigner
      * @throws UnProcessableSignatureException
      */
 
-    public function verifyRequest(MessageInterface $interface, RequestInterface $originalRequest = null): bool
+    public function verifyRequest(MessageInterface $interface, ?RequestInterface $originalRequest = null): bool
     {
         $headers = [];
         if ($originalRequest) {
