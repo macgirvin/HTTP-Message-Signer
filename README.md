@@ -10,29 +10,33 @@ Supports:
 - PSR-7 HTTP message requests/responses
 - Automatically verify body digest (content-digest header) -- if present
 - Algorithm support:
-  - 'RS256' (JWT)
-  - 'rsa-v1_5-sha256' (RFC9421)
-  - 'RS384' (JWT)
-  - 'rsa-v1_5-sha384'
-  - 'RS512' (JWT)
-  - 'rsa-v1_5-sha512' (RFC9421)
-  - 'rsa-pss-sha512' (RFC9421)
-  - 'EdDSA' (JWT)
-  - 'Ed25519' (openssl)
-  - 'ed25519' (RFC9421)
-  - 'HS256' (JWT)
-  - 'hmac-sha256' (RFC9421)
-  - 'HS384' (JWT)
-  - 'hmac-sha384'
-  - 'HS512' (JWT)
-  - 'hmac-sha512'
-  - 'ES256' (JWT)
-  - 'ecdsa-p256-sha256' (RFC9421)
-  - 'ES384' (JWT)
-  - 'ecdsa-p384-sha384' (RFC9421)
-  - 'ES512' (JWT)
-  - 'ecdsa-p512-sha512'
-
+    - RFC-9421
+        - 'rsa-v1_5-sha256'
+        - 'rsa-v1_5-sha512'
+        - 'rsa-pss-sha512'
+        - 'ed25519'
+        - 'hmac-sha256'
+        - 'ecdsa-p256-sha256'
+        - 'ecdsa-p384-sha384'
+    - JWT
+        - 'RS256'
+        - 'RS384'
+        - 'RS512'
+        - 'EdDSA'
+        - 'HS256'
+        - 'HS384'
+        - 'HS512'
+        - 'ES256'
+        - 'ES384'
+        - 'ES512'
+    - OpenSSL
+        - 'Ed25519'
+    - Other
+        - 'rsa-v1_5-sha384'
+        - 'ecdsa-p512-sha512'
+        - 'hmac-sha384'
+        - 'hmac-sha512'
+  
 ## Note
 
 Please report issues. Thanks. Tested on PHP 8.4, should run fine on 8.1+
