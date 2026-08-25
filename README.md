@@ -178,6 +178,8 @@ To sign or verify an HTTP Response, use a ResponseInterface as the provided `$in
 ## Known issues
 Currently not implemented is the special handling of the `cookie` and `set-cookie` headers when using the `sf` modifier. For further information please see https://httpwg.org/http-extensions/draft-ietf-httpbis-retrofit.html and https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20 (or later). It is planned to implement this once RFC6265bis is finalised as a new RFC.
 
+There is currently no handling of Accept-Signature, as conflict negotiation depends largely on the requirements of the application. These can be parsed using functions in this library and its dependencies, but any conflict resolution is left to the calling application, which would need to perform the steps in RFC-9421:section 5.2 'Processing an Accept-Signature'. 
+
 Currently, PEM keys are supported as per the RFC examples. JWT/JWK keys are not yet fully supported. A number of encryption libraries are being used to obtain coverage of the entire suite of supported algorithms under PHP, and their key format support varies dramatically.  
 
 JWT/JWK algorithm identifiers are permitted for any of the supported algorithms. For instance, 'RS256' and 'rsa-v1_5-sha256' are inter-changeable, depending on your application requirements. 
