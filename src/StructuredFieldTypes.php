@@ -27,6 +27,7 @@ accept-language list
 accept-patch list
 accept-post list
 accept-ranges list
+accept-signature dictionary
 access-control-allow-credentials item
 access-control-allow-headers list
 access-control-allow-methods list
