@@ -169,6 +169,8 @@ Using the 'sf' parameter on a component will treat a signature component as a St
 
 However, parsing arbitrary Structured Fields by adding the 'sf' parameter is likely to fail unless you know what `type` it is. A built-in table contains the type definition for a number of known stuctured header types. This list is probably incomplete. A method `addStructuredFieldTypes()` is available to add the type information so it can be successfully parsed. This takes an array with key of the lowercase header name and a value; which is one of 'list', 'innerlist', 'parameters, 'dictionary', 'item'. If the header name is in the list and the 'sf' modifier is used, the header will be parsed as the Structured Field type indicated.
 
+If a structured field is encountered which has no registered type, an attempt is made to parse the field per RFC-8941:Section 4.1 Serializing Structured Fields. If this also fails, signature generation and validation will fail. 
+
 If a Structured Field is declared as type 'dictionary'; it is suitable for use with the RFC9421 `key` parameter. Using this parameter will fail if the Structured Field type is unknown or has not been registered.
 
 The signRequest() and verifyRequest() methods both use an instance of MessageInterface. In nearly all cases, this will be the RequestInterface. However, when signing responses, the default will be the ResponseInterface, and if components are required from the RequestInterface, the :req parameter must be added to the field definition. 
@@ -176,7 +178,7 @@ The signRequest() and verifyRequest() methods both use an instance of MessageInt
 To sign or verify an HTTP Response, use a ResponseInterface as the provided `$interface`, and provide the RequestInterface in `$originalRequest`. This is optional but will allow the `req` modifier to work correctly when signing Responses.
 
 ## Known issues
-Currently not implemented is the special handling of the `cookie` and `set-cookie` headers when using the `sf` modifier. For further information please see https://httpwg.org/http-extensions/draft-ietf-httpbis-retrofit.html and https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20 (or later). It is planned to implement this once RFC6265bis is finalised as a new RFC.
+Currently not implemented is the special handling of the `cookie` and `set-cookie` headers when using the `sf` modifier. For further information please see https://httpwg.org/http-extensions/draft-ietf-httpbis-retrofit.html and https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-22 (or later). It is planned to implement this once RFC6265bis is finalised as a new RFC.
 
 There is currently no handling of Accept-Signature, as conflict negotiation depends largely on the requirements of the application. These can be parsed using functions in this library and its dependencies, but any conflict resolution is left to the calling application, which would need to perform the steps in RFC-9421:section 5.2 'Processing an Accept-Signature'. 
 
