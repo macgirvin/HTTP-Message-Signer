@@ -160,7 +160,17 @@ class HttpMessageSigner
                     throw new UnProcessableSignatureException('Duplicate member found');
                 }
                 $processedComponents[] = $member;
-                $signatureComponents[] = $this->canonicalizeComponent($member, $headers, $interface);
+                try {
+                    $componentValue = $this->canonicalizeComponent($member, $headers, $interface);
+                    // RFC8941:4.1.1 If structured field is a catalog or list and has no members, do not serialize the field at all.
+                    if (!is_null($componentValue)) {
+                        $signatureComponents[] = $componentValue;
+                    }
+                }
+                catch (UnProcessableSignatureException $e) {
+                    // Throw any UnProcessableSignatureException errors upstream
+                    throw new UnProcessableSignatureException($e->getMessage());
+                }
             }
         }
 
@@ -211,8 +221,18 @@ class HttpMessageSigner
                 if ($members instanceof InnerList) {
                     $innerIndices = $members->indices();
                     foreach ($innerIndices as $innerIndex) {
-                       $member = $members->getByIndex($innerIndex);
-                       $signatureComponents[$dictName][] = $this->canonicalizeComponent($member, $headers, $interface);
+                        $member = $members->getByIndex($innerIndex);
+                        try {
+                            $componentValue = $this->canonicalizeComponent($member, $headers, $interface);
+                            // RFC8941:4.1.1 If structured field is a catalog or list and has no members, do not serialize the field at all.
+                            if (!is_null($componentValue)) {
+                                $signatureComponents[$dictName][] = $componentValue;
+                            }
+                        }
+                        catch (UnProcessableSignatureException $e) {
+                            // Throw any UnProcessableSignatureException errors upstream
+                            throw new UnProcessableSignatureException($e->getMessage());
+                        }
                     }
                     $parameters = $this->extractParameters($members);
                     if ($parameters) {
@@ -270,7 +290,7 @@ class HttpMessageSigner
         return $parameters;
     }
 
-    private function canonicalizeComponent($field, array $headers, MessageInterface $interface): string
+    private function canonicalizeComponent($field, array $headers, MessageInterface $interface): string|null
     {
         $fieldName = $field->value();
         $parameters = $this->extractParameters($field);
@@ -312,7 +332,12 @@ class HttpMessageSigner
         }
 
         if (isset($parameters['sf'])) {
-            $value = $this->applyStructuredField($name, $value);
+            try {
+                $value = $this->applyStructuredField($name, $value);
+            }
+            catch (EmptyStructuredListException $e) {
+                return null;
+            }
             return $name . ';sf: ' . $value;
         }
         if (isset($parameters['key'])) {
@@ -418,45 +443,75 @@ class HttpMessageSigner
 
     private function applyStructuredField(string $name, string $fieldValue): string
     {
+        /**
+         * First, try a lookup of known structured field types.
+         */
         $type = $this->structuredFieldTypes[trim($name, '"')];
-        switch ($type) {
-            case 'list':
-                $field = OuterList::fromHttpValue($fieldValue);
-                break;
-            case 'innerlist':
-                $field = InnerList::fromHttpValue($fieldValue);
-                break;
-            case 'parameters':
-                $field = Parameters::fromHttpValue($fieldValue);
-                break;
-            case 'dictionary':
-                $field = Dictionary::fromHttpValue($fieldValue);
-                break;
-            case 'item':
-                $field = Item::fromHttpValue($fieldValue);
-                break;
-            case 'url':
-                return '"' . $fieldValue . '"';
-            case 'date':
-                return '@' . strtotime($fieldValue);
-            case 'etag':
-                $result = '';
-                $list = explode(',', $fieldValue);
-                foreach ($list as $item) {
-                    if (str_starts_with(trim($item), 'W/')) {
-                        $result .= substr(trim($item), 2) . '; w' . ', ';
-                    } else {
-                        $result .= trim($item) . ', ';
+        if ($type) {
+            switch ($type) {
+                case 'list':
+                    $field = OuterList::fromHttpValue($fieldValue);
+                    break;
+                case 'innerlist':
+                    $field = InnerList::fromHttpValue($fieldValue);
+                    break;
+                case 'parameters':
+                    $field = Parameters::fromHttpValue($fieldValue);
+                    break;
+                case 'dictionary':
+                    $field = Dictionary::fromHttpValue($fieldValue);
+                    break;
+                case 'item':
+                    $field = Item::fromHttpValue($fieldValue);
+                    break;
+                case 'url':
+                    return '"' . $fieldValue . '"';
+                case 'date':
+                    return '@' . strtotime($fieldValue);
+                case 'etag':
+                    $result = '';
+                    $list = explode(',', $fieldValue);
+                    foreach ($list as $item) {
+                        if (str_starts_with(trim($item), 'W/')) {
+                            $result .= substr(trim($item), 2) . '; w' . ', ';
+                        } else {
+                            $result .= trim($item) . ', ';
+                        }
                     }
+                    return rtrim($result, ', ');
+                case 'cookie':
+                    // @TODO
+                default:
+                    break;
+            }
+        }
+        else {
+            /**
+             * Not a known type. Perform the serialization steps in RFC8941:4.1
+             */
+            $field = OuterList::fromHttpValue($fieldValue);
+            if ($field) {
+                $type = 'list';
+            }
+            else {
+                $field = Dictionary::fromHttpValue($fieldValue);
+                if ($field) {
+                    $type = 'dictionary';
                 }
-                return rtrim($result, ', ');
-            case 'cookie':
-                // @TODO
-            default:
-                break;
+            }
+            if (!$field) {
+                $field = Item::fromHttpValue($fieldValue);
+                if ($field) {
+                    $type = 'item';
+                }
+            }
         }
         if (!$field) {
             throw new UnProcessableSignatureException('Unknown or unregistered structured field type');
+        }
+        $httpValue = $field->toHttpValue();
+        if (in_array($type, ['dictionary', 'list']) && !$httpValue) {
+            throw new EmptyStructuredListException('Empty structured list/catalog');
         }
         return $field->toHttpValue();
     }
