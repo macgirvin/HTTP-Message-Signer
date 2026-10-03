@@ -39,6 +39,7 @@ final class HttpMessageSignerTest extends TestCase
                 'x-test' => '',
                 'Example-Dict' => '  a=1,    b=2;x=1;y=2,   c=(a   b   c), d ',
                 'Empty-List' => '',
+                'Another-Empty-List' => '',
             ]
         );
         /**
@@ -48,9 +49,10 @@ final class HttpMessageSignerTest extends TestCase
         $request = $request->withAddedHeader('Example-Header', 'of, commas');
         $request = $request->withHeader('If-None-Match', 'W/"abcdef", "ghijkl", *');
 
-        $coveredFields = '("example-header";bs "@method" "@path" "host" "if-none-match";sf "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d" "empty-list";sf)';
+        $coveredFields = '("example-header";bs "@method" "@path" "host" "if-none-match";sf "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d" "empty-list";sf "another-empty-list")';
         $this->signer->addStructuredFieldType(['example-dict' => 'dictionary']);
         $this->signer->addStructuredFieldType(['empty-list' => 'list']);
+        $this->signer->addStructuredFieldType(['another-empty-list' => 'list']);
         $request = $this->signer->signRequest($coveredFields, $request);
 
         $this->assertTrue($request->hasHeader('signature'));
@@ -76,7 +78,8 @@ final class HttpMessageSignerTest extends TestCase
         $this->assertContains('"example-dict";key="b": 2;x=1;y=2', $normalised);
         $this->assertContains('"example-dict";key="c": (a b c)', $normalised);
         $this->assertContains('"example-dict";key="d": ?1', $normalised);
-        $this->assertNotContains('"empty-list":', $normalised);
+        $this->assertNotContains('"empty-list":', $normalised, 'empty structured field lists parsed as structured fields should be ignored');
+        $this->assertContains('"another-empty-list": ', $normalised, 'empty structured field lists which are not parsed as structured fields should be included');
         $this->assertEquals($request->getRequestTarget(), '/resource?bat&baz=3');
 
         $isValid = $this->signer->verifyRequest($request);
