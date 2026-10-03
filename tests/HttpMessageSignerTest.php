@@ -38,6 +38,7 @@ final class HttpMessageSignerTest extends TestCase
                 'Date' => $date,
                 'x-test' => '',
                 'Example-Dict' => '  a=1,    b=2;x=1;y=2,   c=(a   b   c), d ',
+                'Empty-List' => '',
             ]
         );
         /**
@@ -47,8 +48,9 @@ final class HttpMessageSignerTest extends TestCase
         $request = $request->withAddedHeader('Example-Header', 'of, commas');
         $request = $request->withHeader('If-None-Match', 'W/"abcdef", "ghijkl", *');
 
-        $coveredFields = '("example-header";bs "@method" "@path" "host" "if-none-match";sf "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d")';
+        $coveredFields = '("example-header";bs "@method" "@path" "host" "if-none-match";sf "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d" "empty-list";sf)';
         $this->signer->addStructuredFieldType(['example-dict' => 'dictionary']);
+        $this->signer->addStructuredFieldType(['empty-list' => 'list']);
         $request = $this->signer->signRequest($coveredFields, $request);
 
         $this->assertTrue($request->hasHeader('signature'));
@@ -74,7 +76,7 @@ final class HttpMessageSignerTest extends TestCase
         $this->assertContains('"example-dict";key="b": 2;x=1;y=2', $normalised);
         $this->assertContains('"example-dict";key="c": (a b c)', $normalised);
         $this->assertContains('"example-dict";key="d": ?1', $normalised);
-
+        $this->assertNotContains('"empty-list":', $normalised);
         $this->assertEquals($request->getRequestTarget(), '/resource?bat&baz=3');
 
         $isValid = $this->signer->verifyRequest($request);
@@ -317,6 +319,7 @@ final class HttpMessageSignerTest extends TestCase
                 'Date' => gmdate('D, d M Y H:i:s T'),
                 'Example-Dict' => '  a=1,    b=2;x=1;y=2,   c=(a   b   c), d ',
                 'If-None-Match' => 'W/"abcdef", "ghijkl", *',
+                'Empty-List' => '',
             ],
             '{"message":"hello"}'
         );
@@ -324,8 +327,9 @@ final class HttpMessageSignerTest extends TestCase
         $request = $request->withHeader('Example-Header', 'value, with, lots');
         $request = $request->withAddedHeader('Example-Header', 'of, commas');
 
-        $coveredFields = '("@method" "@path" "if-none-match";sf "host" "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "content-digest" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d" "example-header";bs)';
+        $coveredFields = '("@method" "@path" "if-none-match";sf "host" "date" "date";sf "@request-target" "@target-uri" "@query-param";name="baz" "@query-param";name="bat" "content-digest" "example-dict" "example-dict";sf "example-dict";key="a" "example-dict";key="b" "example-dict";key="c" "example-dict";key="d" "example-header";bs "empty-list";sf)';
         $this->signer->addStructuredFieldType(['example-dict' => 'dictionary']);
+        $this->signer->addStructuredFieldType(['empty-list' => 'list']);
         $digest = $this->signer->createContentDigestHeader((string) $request->getBody());
         $request = $request->withHeader('Content-Digest', $digest);
         $request = $this->signer->signRequest($coveredFields, $request);
